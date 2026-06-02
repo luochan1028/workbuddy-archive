@@ -1,0 +1,65 @@
+{
+  "layer1": {
+    "request_id": "",
+    "code": 40101,
+    "data": null,
+    "msg": "您的token不对，请确认。",
+    "detail": ""
+  },
+  "layer2": {
+    "request_id": "",
+    "code": 40101,
+    "data": null,
+    "msg": "您的token不对，请确认。",
+    "detail": ""
+  },
+  "layer3": {
+    "request_id": "",
+    "code": 40101,
+    "data": null,
+    "msg": "您的token不对，请确认。",
+    "detail": ""
+  },
+  "layer4": {
+    "request_id": "",
+    "code": 40101,
+    "data": null,
+    "msg": "您的token不对，请确认。",
+    "detail": ""
+  },
+  "layer5": {
+    "request_id": "",
+    "code": 40101,
+    "data": null,
+    "msg": "您的token不对，请确认。",
+    "detail": ""
+  },
+  "layer6": {
+    "request_id": "",
+    "code": 40101,
+    "data": null,
+    "msg": "您的token不对，请确认。",
+    "detail": ""
+  },
+  "layer7": {
+    "request_id": "",
+    "code": 40101,
+    "data": null,
+    "msg": "您的token不对，请确认。",
+    "detail": ""
+  },
+  "fina": {
+    "request_id": "",
+    "code": 40101,
+    "data": null,
+    "msg": "您的token不对，请确认。",
+    "detail": ""
+  },
+  "dailyBasic": {
+    "request_id": "",
+    "code": 40101,
+    "data": null,
+    "msg": "您的token不对，请确认。",
+    "detail": ""
+  }
+}

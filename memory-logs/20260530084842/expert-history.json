@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "sessions": {
+    "2f71be5bab1c42c9b9eef4021f6f91ab": [
+      {
+        "expertId": "MultiCloudManagementExpert",
+        "name": "CloudQ",
+        "profession": "多云管理专家",
+        "avatarUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/avatars/02-Engineering/MultiCloudManagementExpert/MultiCloudManagementExpert.png",
+        "promptUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/experts/02-Engineering/MultiCloudManagementExpert/MultiCloudManagementExpert_zh.md",
+        "usedAt": 1780103550464,
+        "industryId": "02-Engineering"
+      }
+    ]
+  },
+  "lastUpdated": 1780112357698
+}

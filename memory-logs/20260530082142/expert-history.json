@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "sessions": {
+    "ec37400aa27343e3be005f50651a22d0": [
+      {
+        "expertId": "MultiCloudManagementExpert",
+        "name": "CloudQ",
+        "profession": "多云管理专家",
+        "avatarUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/avatars/02-Engineering/MultiCloudManagementExpert/MultiCloudManagementExpert.png",
+        "promptUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/experts/02-Engineering/MultiCloudManagementExpert/MultiCloudManagementExpert_zh.md",
+        "usedAt": 1780103550464,
+        "industryId": "02-Engineering"
+      },
+      {
+        "expertId": "PrivateDomainMarketingExpert",
+        "name": "司玉琦",
+        "profession": "私域营销专家",
+        "avatarUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/avatars/03-Marketing/PrivateDomainMarketingExpert/PrivateDomainMarketingExpert.png",
+        "promptUrl": "https://acc-1258344699.cos.accelerate.myqcloud.com/workbuddy/experts/experts/03-Marketing/PrivateDomainMarketingExpert/PrivateDomainMarketingExpert_zh.md",
+        "usedAt": 1780102101277,
+        "industryId": "all"
+      }
+    ]
+  },
+  "lastUpdated": 1780103562364
+}

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI摄影提示词工程手册</title>
+<style>
+  :root {
+    --bg: #FAFAF9;
+    --card: #FFFFFF;
+    --text: #1a1a1a;
+    --text2: #555;
+    --text3: #888;
+    --border: rgba(0,0,0,0.08);
+    --purple: #534AB7;
+    --purple-light: #EEEDFE;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --teal: #0F6E56;
+    --teal-light: #E1F5EE;
+    --coral: #993C1D;
+    --coral-light: #FAECE7;
+    --amber: #854F0B;
+    --amber-light: #FAEEDA;
+    --pink: #993556;
+    --pink-light: #FBEAF0;
+    --green: #3B6D11;
+    --green-light: #EAF3DE;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.3rem; font-weight: 600; margin: 2rem 0 0.8rem; color: var(--purple); }
+  h3 { font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+  .subtitle { color: var(--text2); font-size: 0.95rem; margin-bottom: 2rem; }
+  .card {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .layer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin: 1rem 0;
+  }
+  .layer-card {
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+  }
+  .layer-card h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .layer-card p { font-size: 0.82rem; line-height: 1.5; }
+  .prompt-block {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.85rem;
+    line-height: 1.8;
+    margin: 0.8rem 0;
+    position: relative;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .prompt-block .label {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    background: var(--purple);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-family: -apple-system, sans-serif;
+  }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 0.5rem 0; }
+  .tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0;
+    font-size: 0.85rem;
+  }
+  th { background: var(--purple-light); text-align: left; padding: 8px 12px; font-weight: 600; font-size: 0.8rem; }
+  td { padding: 8px 12px; border-bottom: 0.5px solid var(--border); }
+  tr:hover td { background: rgba(83,74,183,0.03); }
+  .do-dont {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 1rem 0;
+  }
+  @media (max-width: 600px) {
+    .do-dont { grid-template-columns: 1fr; }
+    body { padding: 1rem 0.5rem; }
+  }
+  .do-card { background: var(--teal-light); border-radius: 10px; padding: 1rem 1.2rem; }
+  .dont-card { background: var(--coral-light); border-radius: 10px; padding: 1rem 1.2rem; }
+  .do-card h4, .dont-card h4 { font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .do-card ul, .dont-card ul { padding-left: 1.2rem; font-size: 0.82rem; }
+  .do-card li, .dont-card li { margin-bottom: 0.3rem; }
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: rgba(255,255,255,0.1);
+    color: #cdd6f4;
+    border: 0.5px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    font-family: -apple-system, sans-serif;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.2); }
+  .copy-btn.copied { background: var(--teal); color: #fff; }
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 2rem 0;
+  }
+  .formula {
+    background: var(--amber-light);
+    border-radius: 8px;
+    padding: 0.8rem 1.2rem;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.85rem;
+    margin: 0.8rem 0;
+    border-left: 3px solid var(--amber);
+  }
+</style>
+</head>
+<body>
+
+<h1>AI Photography Prompt Engineering</h1>
+<p class="subtitle">专业级AI摄影提示词工程手册 — 7层架构 × 6大风格 × 心法速查</p>
+
+<h2>一、7层提示词架构</h2>
+<p>每一层向上叠加，最终汇聚为一段完整的摄影级提示词。顺序建议：Subject → Camera → Lighting → Composition → Color & Mood → Environment → Post-process</p>
+
+<div class="layer-grid">
+  <div class="layer-card" style="background:var(--blue-light)">
+    <h4>L1 · Subject 主体</h4>
+    <p>谁 + 做什么 + 情绪 + 关键细节<br><strong>句式</strong>：[身份] + [动态] + [状态] + [细节]</p>
+  </div>
+  <div class="layer-card" style="background:var(--teal-light)">
+    <h4>L2 · Camera 镜头</h4>
+    <p>机身 + 焦段 + 光圈值<br><strong>关键</strong>：焦段决定透视，光圈决定虚化</p>
+  </div>
+  <div class="layer-card" style="background:var(--amber-light)">
+    <h4>L3 · Lighting 布光</h4>
+    <p>光位 + 光质 + 光比<br><strong>核心</strong>：光是摄影的灵魂</p>
+  </div>
+  <div class="layer-card" style="background:var(--coral-light)">
+    <h4>L4 · Composition 构图</h4>
+    <p>取景方式 + 景深 + 空间关系<br><strong>重点</strong>：控制视觉流动</p>
+  </div>
+  <div class="layer-card" style="background:var(--pink-light)">
+    <h4>L5 · Color & Mood 色彩</h4>
+    <p>色调方案 + 情绪关键词<br><strong>技巧</strong>：用色名代替抽象词</p>
+  </div>
+  <div class="layer-card" style="background:var(--green-light)">
+    <h4>L6 · Environment 场景</h4>
+    <p>具体地名/建筑 + 氛围细节<br><strong>秘诀</strong>：地点 > 泛指</p>
+  </div>
+  <div class="layer-card" style="background:var(--purple-light)">
+    <h4>L7 · Post-process 后期</h4>
+    <p>胶片模拟 + 颗粒 + 色调映射<br><strong>关键</strong>：决定最终画面质感</p>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<h2>二、万能提示词公式</h2>
+<div class="formula">
+[Subject description], shot on [Camera body] with [Lens] at f/[aperture], [Lighting setup], [Composition rule], [Color palette], [Environment/Location], [Post-processing style], [Aspect ratio]
+</div>
+
+<div class="section-divider"></div>
+
+<h2>三、6大风格实战提示词</h2>
+
+<h3>1. Cinematic Portrait 电影感人像</h3>
+<div class="prompt-block" id="p1">
+  <span class="label">CINEMATIC PORTRAIT</span>
+  <button class="copy-btn" onclick="copyPrompt('p1', this)">Copy</button>
+A solitary man in his 40s standing at a rain-streaked window, lost in contemplation, silhouette partially lit, shot on Arri Alexa LF with Cooke Anamorphic 75mm lens at f/1.8, Rembrandt lighting from a single warm practical lamp behind camera, rule of thirds composition, shallow depth of field, teal-and-orange cinematic color grade, inside a noir apartment at night with city lights forming bokeh balls in the background, cinematic film grain, anamorphic lens flares, 2.39:1 aspect ratio, masterful cinematography</div>
+
+<h3>2. Backlit Ethereal Portrait 逆光梦幻人像</h3>
+<div class="prompt-block" id="p2">
+  <span class="label">BACKLIT PORTRAIT</span>
+  <button class="copy-btn" onclick="copyPrompt('p2', this)">Copy</button>
+A young woman with flowing auburn hair spinning joyfully in a sun-drenched wildflower meadow, golden hour backlighting creating a luminous rim glow around her silhouette, hair backlit into a halo of light, shot on Hasselblad X2D 100C with XCD 65mm f/2.5 lens at f/2.8, natural backlight with warm golden fill from a reflector, center composition, medium close-up, warm amber and honey color palette with soft green undertones, endless rolling hills of lavender and poppies in Provence, soft diffusion filter, Kodak Portra 400 skin tones, dreamy lens flare, ethereal and romantic mood</div>
+
+<h3>3. Documentary Street 纪实街头</h3>
+<div class="prompt-block" id="p3">
+  <span class="label">DOCUMENTARY</span>
+  <button class="copy-btn" onclick="copyPrompt('p3', this)">Copy</button>
+An elderly fisherman mending nets on a weathered wooden dock, deep concentration etched on his sun-hardened face, hands calloused and precise, shot on Leica M11 with Summilux 35mm f/1.4 ASPH at f/5.6, overcast diffused natural light with subtle side illumination from a harbor lantern, rule of thirds with subject off-center left, deep focus showing textured foreground ropes and distant harbor, muted earth tones and desaturated blues, foggy fishing village in Hokkaido with rusted trawlers and seagulls, Fujifilm Classic Chrome simulation, slight grain, documentary photography style, Steve McCurry inspired</div>
+
+<h3>4. Commercial Product 商业产品</h3>
+<div class="prompt-block" id="p4">
+  <span class="label">COMMERCIAL</span>
+  <button class="copy-btn" onclick="copyPrompt('p4', this)">Copy</button>
+A premium mechanical wristwatch on a dark slate surface, time frozen at 10:10, exposed balance wheel visible through sapphire caseback catching a pinpoint of light, shot on PhaseOne IQ4 150MP with Schneider 120mm Macro at f/11, multi-point studio strobe lighting — key light from upper left at 45 degrees, edge rim light from right, subtle fill underneath, center composition with negative space, product hovering slightly above surface with a razor-thin shadow, deep focus, high-key accent on polished steel, cool steel-blue and warm rose-gold palette, dark volcanic rock texture background, ultra-sharp focus, no grain, commercial product photography, 8K resolution detail</div>
+
+<h3>5. Dreamy Landscape 梦幻风光</h3>
+<div class="prompt-block" id="p5">
+  <span class="label">LANDSCAPE</span>
+  <button class="copy-btn" onclick="copyPrompt('p5', this)">Copy</button>
+A glacial lake reflecting snow-capped Dolomite peaks at blue hour, first light painting the mountain ridges in soft alpenglow, wisps of morning fog drifting across the mirror-still water surface, shot on Sony A7R V with FE 14mm f/1.8 GM at f/8, natural blue hour ambient light complemented by the first warm rays of sunrise hitting the peaks, leading lines from shoreline rocks toward the mountain reflection, wide-angle grand landscape, cool steel blue transitioning to warm peach on the peaks, Val di Funes, South Tyrol, Italy, with a lone wooden chapel in the midground, long exposure smoothing the water, HDR tonal mapping preserving detail in shadows and highlights, National Geographic quality, 16:9 aspect ratio</div>
+
+<h3>6. Dark Concept Portrait 暗黑概念</h3>
+<div class="prompt-block" id="p6">
+  <span class="label">DARK CONCEPT</span>
+  <button class="copy-btn" onclick="copyPrompt('p6', this)">Copy</button>
+A figure cloaked in distressed black fabric standing in a field of dead sunflowers, face obscured by shadow except for one piercing pale eye, shot on Canon EOS R3 with RF 85mm f/1.2L at f/1.2, single harsh overhead spotlight with zero fill, creating dramatic chiaroscuro, off-center composition with vast negative space, desaturated palette with muted ochre and cold slate grey, an abandoned farm under a bruised overcast sky, heavy film grain, high contrast black and white with selective desaturation, Nick Knight editorial style, unsettling and haunting, fashion editorial</div>
+
+<div class="section-divider"></div>
+
+<h2>四、参数速查表</h2>
+
+<h3>焦段效果对照</h3>
+<table>
+  <tr><th>焦段</th><th>透视效果</th><th>适合场景</th></tr>
+  <tr><td>14-24mm</td><td>超广角，强烈畸变</td><td>建筑、风光、戏剧人像</td></tr>
+  <tr><td>35mm</td><td>纪实人文，自然透视</td><td>街拍、环境人像</td></tr>
+  <tr><td>50mm</td><td>标准视角，接近人眼</td><td>经典人像、日常</td></tr>
+  <tr><td>85mm</td><td>浅景深人像黄金焦段</td><td>半身人像、特写</td></tr>
+  <tr><td>135-200mm</td><td>强压缩感，极致虚化</td><td>远距离人像、体育</td></tr>
+  <tr><td>100mm Macro</td><td>极近对焦，1:1放大</td><td>微距、产品</td></tr>
+</table>
+
+<h3>布光方案对照</h3>
+<table>
+  <tr><th>布光类型</th><th>英文关键词</th><th>情绪效果</th></tr>
+  <tr><td>伦勃朗光</td><td>Rembrandt lighting</td><td>戏剧性、古典、深沉</td></tr>
+  <tr><td>蝴蝶光</td><td>Butterfly / Paramount lighting</td><td>优雅、时尚、高端</td></tr>
+  <tr><td>分割光</td><td>Split lighting</td><td>神秘、对立、紧张</td></tr>
+  <tr><td>环形光</td><td>Loop lighting</td><td>柔和、自然、通用</td></tr>
+  <tr><td>逆光</td><td>Backlit / Rim lighting</td><td>唯美、梦幻、剪影</td></tr>
+  <tr><td>明暗对照</td><td>Chiaroscuro</td><td>艺术感、戏剧张力</td></tr>
+  <tr><td>黄金时刻</td><td>Golden hour lighting</td><td>温暖、怀旧、浪漫</td></tr>
+  <tr><td>蓝调时刻</td><td>Blue hour lighting</td><td>忧郁、静谧、都市感</td></tr>
+</table>
+
+<h3>色彩情绪对照</h3>
+<table>
+  <tr><th>色调</th><th>关键词</th><th>情绪</th></tr>
+  <tr><td>暖橙</td><td>Warm amber tones, terracotta palette</td><td>温馨、怀旧</td></tr>
+  <tr><td>冷蓝</td><td>Cool steel blue, desaturated cyan</td><td>理性、孤独</td></tr>
+  <tr><td>大地色</td><td>Earth tones, muted olive &amp; sienna</td><td>自然、质朴</td></tr>
+  <tr><td>赛博霓虹</td><td>Neon cyberpunk, magenta &amp; cyan</td><td>未来感、叛逆</td></tr>
+  <tr><td>胶片褪色</td><td>Faded film, Kodak Portra 400</td><td>复古、文艺</td></tr>
+  <tr><td>高对比黑白</td><td>High contrast B&amp;W, Zone system</td><td>力量感、永恒</td></tr>
+</table>
+
+<div class="section-divider"></div>
+
+<h2>五、心法速查</h2>
+<div class="do-dont">
+  <div class="do-card">
+    <h4>DO 提效技巧</h4>
+    <ul>
+      <li>具体优于抽象 — "terracotta" > "warm color"</li>
+      <li>用专业术语触发精确渲染 — "chiaroscuro" / "Rembrandt"</li>
+      <li>指定机身+镜头组合 — "Hasselblad X2D + 65mm"</li>
+      <li>添加摄影师/电影参考 — "Roger Deakins style"</li>
+      <li>控制景深与焦点 — "f/1.2 bokeh" / "f/11 deep focus"</li>
+      <li>指定宽高比 — "2.39:1 cinematic" / "4:5 portrait"</li>
+      <li>用色名代替抽象词 — "amber" > "warm"</li>
+    </ul>
+  </div>
+  <div class="dont-card">
+    <h4>DON'T 常见雷区</h4>
+    <ul>
+      <li>避免模糊情绪词 — "beautiful" / "nice" / "good"</li>
+      <li>不要堆砌矛盾指令 — "bright AND moody" = chaos</li>
+      <li>别用AI味词汇 — "hyper-realistic 4K ultra HD"</li>
+      <li>不要省略光位描述 — 缺光 = AI猜测 = 不稳定</li>
+      <li>别忽略环境叙事 — "in a room" 不是场景</li>
+      <li>不要过度指定 — 75词以上反而降质</li>
+      <li>别混用矛盾风格 — "film grain AND 8K sharp"</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<h2>六、高级Power Words</h2>
+<p>这些词汇在AI图像生成中具有高度触发效力：</p>
+
+<h3>光效类</h3>
+<div class="tag-row">
+  <span class="tag" style="background:var(--amber-light);color:var(--amber)">volumetric light</span>
+  <span class="tag" style="background:var(--amber-light);color:var(--amber)">god rays</span>
+  <span class="tag" style="background:var(--amber-light);color:var(--amber)">crepuscular rays</span>
+  <span class="tag" style="background:var(--amber-light);color:var(--amber)">lens flare</span>
+  <span class="tag" style="background:var(--amber-light);color:var(--amber)">anamorphic flare</span>
+  <span class="tag" style="background:var(--amber-light);color:var(--amber)">bokeh balls</span>
+  <span class="tag" style="background:var(--amber-light);color:var(--amber)">rim lighting</span>
+  <span class="tag" style="background:var(--amber-light);color:var(--amber)">practical light</span>
+</div>
+
+<h3>质感类</h3>
+<div class="tag-row">
+  <span class="tag" style="background:var(--teal-light);color:var(--teal)">film grain</span>
+  <span class="tag" style="background:var(--teal-light);color:var(--teal)">chromatic aberration</span>
+  <span class="tag" style="background:var(--teal-light);color:var(--teal)">bloom</span>
+  <span class="tag" style="background:var(--teal-light);color:var(--teal)">matte finish</span>
+  <span class="tag" style="background:var(--teal-light);color:var(--teal)">diffusion filter</span>
+  <span class="tag" style="background:var(--teal-light);color:var(--teal)">halation</span>
+  <span class="tag" style="background:var(--teal-light);color:var(--teal)">light leak</span>
+</div>
+
+<h3>胶片模拟类</h3>
+<div class="tag-row">
+  <span class="tag" style="background:var(--pink-light);color:var(--pink)">Kodak Portra 400</span>
+  <span class="tag" style="background:var(--pink-light);color:var(--pink)">Kodak Ektar 100</span>
+  <span class="tag" style="background:var(--pink-light);color:var(--pink)">Fujifilm Classic Chrome</span>
+  <span class="tag" style="background:var(--pink-light);color:var(--pink)">Fujifilm Pro 400H</span>
+  <span class="tag" style="background:var(--pink-light);color:var(--pink)">Cinestill 800T</span>
+  <span class="tag" style="background:var(--pink-light);color:var(--pink)">Ilford HP5 Plus</span>
+  <span class="tag" style="background:var(--pink-light);color:var(--pink)">Kodak Tri-X 400</span>
+</div>
+
+<script>
+function copyPrompt(id, btn) {
+  const el = document.getElementById(id);
+  const text = el.innerText.replace('Copy','').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>
