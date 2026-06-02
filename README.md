@@ -6,25 +6,24 @@
 ## 目录结构
 
 ```
-├── a-stock-analysis/      # A股打板分析
-│   ├── data/              # 涨停数据、选股结果 (CSV/JSON)
-│   ├── reports/           # 分析报告 (MD/DOCX)
-│   └── scripts/           # Python/Node.js 分析脚本
-├── content-creation/      # 内容创作
-│   ├── story/             # 双女主故事 + AI绘图提示词
-│   ├── comedy/            # 段子短视频 + 冷笑话
-│   ├── ai-video/          # AI编程视频脚本
-│   └── strategy/          # 阶级跃迁战略文档
-├── wealth-reports/        # 财富市场全景报告
-└── memory-logs/           # 各工作区的对话记忆/日志
-    ├── 20260530084842/    # 涨停板量化分析
-    ├── 20260530091900/    # 打板策略
-    ├── 20260530100836/    # 资金流向分析
-    ├── 20260530114642/    # AI产业链选股
-    └── ...
+workbuddy-archive/
+├── pc-huasuo/          ← 华硕台式机（当前电脑）
+│   ├── a-stock-analysis/  # A股打板分析
+│   ├── content-creation/  # 内容创作
+│   ├── wealth-reports/    # 财富市场报告
+│   └── memory-logs/      # 对话记忆日志
+├── pc-other/             ← 另一台电脑（待上传）
+│   └── ...
+└── README.md
 ```
 
-## 主要内容概览
+## 同步策略
+
+- **需要持续迭代的内容** → 两台电脑都 `git pull` 保持同步
+- **不用迭代的** → 传上云端备份即可
+- 每次开工前 `git pull`，收工后 `git push`
+
+## pc-huasuo 内容概览
 
 ### A股分析（7层产业链 + 5维评分框架）
 - 涨停板量化评估与实时监控系统
