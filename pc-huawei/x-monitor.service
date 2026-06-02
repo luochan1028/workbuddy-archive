@@ -1,0 +1,31 @@
+[Unit]
+Description=X/Twitter 多账号监控服务 — 全球投资情报
+Documentation=https://github.com/nickliu/x-monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/x-monitor
+ExecStart=/opt/x-monitor/venv/bin/python /opt/x-monitor/monitor_x.py --daemon 300
+ExecStop=/bin/kill -TERM $MAINPID
+Restart=always
+RestartSec=30
+StandardOutput=append:/opt/x-monitor/monitor.log
+StandardError=append:/opt/x-monitor/monitor.log
+
+# 安全限制（如果遇到权限问题，注释掉 ProtectSystem=strict）
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/x-monitor
+
+# 环境变量
+Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONIOENCODING=utf-8"
+Environment="LANG=en_US.UTF-8"
+
+[Install]
+WantedBy=multi-user.target

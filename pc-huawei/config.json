@@ -1,0 +1,22 @@
+{
+  "accounts": [
+    "realDonaldTrump",
+    "elonmusk",
+    "CathieDWood",
+    "justinsuntron",
+    "federalreserve"
+  ],
+  "fetch_method": "html",
+  "web_port": 8080,
+  "wechat_push": {
+    "enabled": true,
+    "channel": "pushplus",
+    "serverchan_sendkey": "",
+    "pushplus_token": "2e23d985875f4b47ba0a3593a8578504",
+    "wecom_webhook": "",
+    "enable_new_tweet": true,
+    "enable_error_alert": true,
+    "enable_daily_summary": true,
+    "new_tweet_limit": 3
+  }
+}
