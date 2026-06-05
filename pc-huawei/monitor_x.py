@@ -686,7 +686,11 @@ def _load_wechat_notifier() -> Optional[object]:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             config = json.load(f)
         push_cfg = config.get("wechat_push", {})
-        if push_cfg.get("enabled") and push_cfg.get("serverchan_sendkey"):
+        if push_cfg.get("enabled") and (
+            push_cfg.get("serverchan_sendkey") or
+            push_cfg.get("pushplus_token") or
+            push_cfg.get("wecom_webhook")
+        ):
             return WeChatNotifier(config)
     except Exception:
         pass
