@@ -67,6 +67,7 @@ class WechatPusher:
         self.enabled = wp.get("enabled", False)
         self.token = wp.get("pushplus_token", "")
         self._last_alert = {}  # 防刷
+        self.cfg = cfg  # 保存完整配置供后续使用
 
     def _cooldown(self, category: str) -> float:
         """根据类别返回冷却时间（秒）"""
@@ -242,7 +243,7 @@ def check_memory() -> dict:
 # ═════════════════════════════════════════════════════════════
 
 def generate_daily_summary() -> str:
-    """生成每日数据摘要文本"""
+    """生成每日数据摘要文本（v2.0 — 匹配原型推送格式）"""
     try:
         conn = sqlite3.connect(str(DB_PATH))
         today = datetime.now().strftime("%Y-%m-%d")
@@ -297,6 +298,37 @@ def generate_daily_summary() -> str:
         return "\n".join(lines)
     except Exception as e:
         return f"生成摘要失败: {e}"
+
+
+def generate_daily_summary_v2() -> dict:
+    """生成每日情报简报数据（v2.0 — 匹配原型设计的完整推送格式）"""
+    try:
+        import sqlite3 as sq
+        conn = sq.connect(str(DB_PATH))
+
+        from wechat_notify import build_daily_summary_data
+        summary_data = build_daily_summary_data(conn)
+        conn.close()
+        return summary_data
+    except ImportError:
+        # wechat_notify 不可用时，降级为简单格式
+        return {
+            "one_line_summary": generate_daily_summary(),
+            "top_signals": [],
+            "risk_warnings": [],
+            "total_tweets": 0,
+            "active_accounts": 0,
+            "sector_overview": [],
+        }
+    except Exception as e:
+        return {
+            "one_line_summary": f"摘要生成失败: {e}",
+            "top_signals": [],
+            "risk_warnings": [],
+            "total_tweets": 0,
+            "active_accounts": 0,
+            "sector_overview": [],
+        }
 
 
 # ═════════════════════════════════════════════════════════════
@@ -513,21 +545,39 @@ def run_check(pusher: WechatPusher, state: dict) -> list:
         )
         state["last_heartbeat_sent"] = now_ts
 
-    # ── 7. 每日摘要（每天 08:00-08:30 之间推送一次） ──
+    # ── 7. 每日摘要（v2.0: 可配置推送时间，默认 21:00） ──
     now_dt = datetime.now()
     last_daily = state.get("last_daily_summary")
-    is_morning = 8 <= now_dt.hour < 9
+    daily_hour = config.get("wechat_push", {}).get("daily_push_hour", 21)
+    is_push_window = daily_hour <= now_dt.hour < daily_hour + 1
     should_send_daily = (
-        is_morning and
+        is_push_window and
         (not last_daily or (now_ts - last_daily) > 82800)  # 23小时
     )
     if should_send_daily:
-        summary = generate_daily_summary()
-        pusher.send(
-            f"📊 每日数据报告 — {now_dt.strftime('%m/%d')}",
-            summary,
-            category="daily_summary",
-        )
+        # v2.0: 使用原型格式的完整情报简报
+        try:
+            from wechat_notify import WeChatNotifier
+            notifier = WeChatNotifier(config)
+            if notifier.enabled:
+                summary_data = generate_daily_summary_v2()
+                date_str = now_dt.strftime("%Y年%-m月%-d日")
+                notifier.daily_summary_push(date_str, summary_data)
+            else:
+                # 降级：使用简单文本格式
+                summary = generate_daily_summary()
+                pusher.send(
+                    f"📊 每日数据报告 — {now_dt.strftime('%m/%d')}",
+                    summary,
+                    category="daily_summary",
+                )
+        except ImportError:
+            summary = generate_daily_summary()
+            pusher.send(
+                f"📊 每日数据报告 — {now_dt.strftime('%m/%d')}",
+                summary,
+                category="daily_summary",
+            )
         state["last_daily_summary"] = now_ts
 
     state["total_issues"] = state.get("total_issues", 0) + len(issues)

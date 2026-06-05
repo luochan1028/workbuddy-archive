@@ -762,6 +762,172 @@ def api_health():
 
 
 # ═════════════════════════════════════════════════════════════
+#  微信推送配置与测试 API (v2.0 — 匹配原型设计)
+# ═════════════════════════════════════════════════════════════
+
+@app.route("/api/push/config", methods=["GET", "POST"])
+def api_push_config():
+    """推送配置读写"""
+    cfg = load_config()
+    push_cfg = cfg.get("wechat_push", {})
+
+    if request.method == "GET":
+        # 返回配置（隐藏敏感 token）
+        return jsonify({
+            "enabled": push_cfg.get("enabled", False),
+            "channel": push_cfg.get("channel", "pushplus"),
+            "has_serverchan_key": bool(push_cfg.get("serverchan_sendkey", "")),
+            "has_pushplus_token": bool(push_cfg.get("pushplus_token", "")),
+            "has_wecom_webhook": bool(push_cfg.get("wecom_webhook", "")),
+            "enable_new_tweet": push_cfg.get("enable_new_tweet", True),
+            "enable_error_alert": push_cfg.get("enable_error_alert", True),
+            "enable_daily_summary": push_cfg.get("enable_daily_summary", True),
+            "new_tweet_limit": push_cfg.get("new_tweet_limit", 3),
+            "daily_push_hour": push_cfg.get("daily_push_hour", 21),
+            "web_dashboard_url": push_cfg.get("web_dashboard_url", ""),
+        })
+
+    # POST: 更新配置
+    data = request.get_json(force=True, silent=True) or {}
+    if "enabled" in data:
+        push_cfg["enabled"] = data["enabled"]
+    if "channel" in data:
+        push_cfg["channel"] = data["channel"]
+    if "enable_new_tweet" in data:
+        push_cfg["enable_new_tweet"] = data["enable_new_tweet"]
+    if "enable_error_alert" in data:
+        push_cfg["enable_error_alert"] = data["enable_error_alert"]
+    if "enable_daily_summary" in data:
+        push_cfg["enable_daily_summary"] = data["enable_daily_summary"]
+    if "new_tweet_limit" in data:
+        push_cfg["new_tweet_limit"] = int(data["new_tweet_limit"])
+    if "daily_push_hour" in data:
+        push_cfg["daily_push_hour"] = int(data["daily_push_hour"])
+    if "web_dashboard_url" in data:
+        push_cfg["web_dashboard_url"] = data["web_dashboard_url"]
+    # Token 更新（仅在传入非空值时）
+    if data.get("serverchan_sendkey"):
+        push_cfg["serverchan_sendkey"] = data["serverchan_sendkey"]
+    if data.get("pushplus_token"):
+        push_cfg["pushplus_token"] = data["pushplus_token"]
+    if data.get("wecom_webhook"):
+        push_cfg["wecom_webhook"] = data["wecom_webhook"]
+
+    cfg["wechat_push"] = push_cfg
+    try:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+        return jsonify({"ok": True, "message": "配置已保存"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/push/test", methods=["POST"])
+def api_push_test():
+    """发送测试推送"""
+    cfg = load_config()
+    try:
+        from wechat_notify import WeChatNotifier
+        notifier = WeChatNotifier(cfg)
+        if not notifier.enabled:
+            return jsonify({"ok": False, "error": "微信推送未启用或无有效渠道"}), 400
+
+        data = request.get_json(force=True, silent=True) or {}
+        push_type = data.get("type", "tweet")
+
+        if push_type == "tweet":
+            notifier.new_tweets_alert("test_account", [{
+                "content": "This is a test tweet from x-monitor. Markets are looking strong today!",
+                "translated": "这是来自x-monitor的测试推文。今日市场表现强劲！",
+                "sentiment": "👍 正面",
+                "priority": "high",
+                "interpretation": "测试推送：模拟高优先级信号的完整推送格式，包含投资解读、信号标签和板块标注。",
+                "signal_tags": ["关税/贸易", "科技AI"],
+                "sector_tags": ["出口贸易", "人工智能"],
+                "direction": "bullish",
+            }])
+        elif push_type == "alert":
+            notifier.error_alert("test_account", "测试异常告警消息", consecutive=2,
+                               instance_info={
+                                   "failed": "xcancel.com",
+                                   "switched_to": "nitter.net",
+                                   "failover_count_hour": 2,
+                                   "monitoring_ok": True,
+                               })
+        elif push_type == "daily":
+            notifier.daily_summary_push("测试推送", {
+                "one_line_summary": "这是一条测试推送：特朗普对华关税软化+马斯克FSD入华+AI开源，整体对A股偏暖。",
+                "top_signals": [
+                    {"signal": "特朗普释放贸易谈判积极信号", "sectors": ["出口贸易"], "direction": "bullish"},
+                    {"signal": "马斯克FSD 13.0下周入华", "sectors": ["新能源/电动车"], "direction": "bullish"},
+                    {"signal": "Grok-4开源", "sectors": ["AI/大模型"], "direction": "bullish"},
+                ],
+                "risk_warnings": ["AI竞争格局不确定性", "通胀数据反复风险"],
+                "total_tweets": 28,
+                "active_accounts": 5,
+                "sector_overview": [
+                    {"name": "新能源/电动车", "direction": "bullish", "summary": "利好(2次)"},
+                    {"name": "AI/大模型", "direction": "bullish", "summary": "利好(2次)"},
+                ],
+            })
+        elif push_type == "heartbeat":
+            notifier.heartbeat({
+                "total_tweets": 1234,
+                "active_accounts": 5,
+                "disk_free": "15.2GB",
+                "db_healthy": True,
+            })
+        else:
+            return jsonify({"ok": False, "error": f"未知推送类型: {push_type}"}), 400
+
+        return jsonify({"ok": True, "message": f"测试推送({push_type})已发送"})
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/push/preview")
+def api_push_preview():
+    """获取推送预览数据（用于前端微信预览界面）"""
+    return jsonify({
+        "tweet_push": {
+            "title": "🔴 高优先级信号",
+            "subtitle": "@realDonaldTrump · 刚刚",
+            "en_text": '"Just had a great call with China\'s leadership. Making real progress on trade."',
+            "cn_highlight": "特朗普释放关税软化信号，中美贸易谈判窗口或重启。对A股出口贸易板块利好。",
+            "tags": [
+                {"text": "关税/贸易", "type": "signal"},
+                {"text": "出口贸易", "type": "sector"},
+                {"text": "利好", "type": "direction", "dir": "up"},
+            ],
+        },
+        "alert_push": {
+            "title": "⚠️ 监控异常告警",
+            "content": "Nitter实例 xcancel.com 返回异常，已自动切换至 nitter.net",
+            "detail": "最近1小时内发生 2次 故障转移。当前监控仍正常运行。",
+        },
+        "daily_push": {
+            "title": "📚 每日情报简报",
+            "date": datetime.now().strftime("%Y年%-m月%-d日"),
+            "one_line": "特朗普对华关税软化+马斯克FSD入华+AI开源，整体对A股偏暖。",
+            "top_signals": [
+                {"signal": "特朗普释放贸易谈判积极信号", "sector": "出口贸易", "dir": "up"},
+                {"signal": "马斯克FSD 13.0下周入华", "sector": "新能源/电动车", "dir": "up"},
+                {"signal": "Grok-4开源", "sector": "AI/大模型", "dir": "up"},
+            ],
+            "risks": ["AI竞争格局不确定性", "通胀数据反复风险", "中美谈判不确定性"],
+        },
+        "config": {
+            "channel": "pushplus",
+            "enable_new_tweet": True,
+            "enable_error_alert": True,
+            "enable_daily_summary": True,
+            "daily_push_hour": 21,
+        },
+    })
+
+
+# ═════════════════════════════════════════════════════════════
 #  翻译 API
 # ═════════════════════════════════════════════════════════════
 

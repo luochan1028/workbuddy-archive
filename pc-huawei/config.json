@@ -17,6 +17,8 @@
     "enable_new_tweet": true,
     "enable_error_alert": true,
     "enable_daily_summary": true,
-    "new_tweet_limit": 3
+    "new_tweet_limit": 3,
+    "daily_push_hour": 21,
+    "web_dashboard_url": ""
   }
 }

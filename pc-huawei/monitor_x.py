@@ -736,13 +736,29 @@ def run_once(conn: sqlite3.Connection, use_api: bool = False,
 
         if new_tweets:
             logger.info(f"[@{username}] 发现 {len(new_tweets)} 条新推文")
-            # 翻译新推文
+            # 翻译新推文 + 信号分析
             for t in new_tweets:
                 try:
                     t.translated = translate_to_chinese(t.content)
                 except Exception:
                     t.translated = ""
                 t.sentiment = analyze_sentiment(t.content)
+                # v2.0: 集成信号引擎，为推送准备完整数据
+                try:
+                    from wechat_notify import build_tweet_push_data
+                    push_data = build_tweet_push_data(t, username)
+                    t.push_data = push_data
+                except ImportError:
+                    t.push_data = {
+                        "content": t.content,
+                        "translated": getattr(t, "translated", ""),
+                        "sentiment": t.sentiment,
+                        "priority": "low",
+                        "interpretation": "",
+                        "signal_tags": [],
+                        "sector_tags": [],
+                        "direction": "neutral",
+                    }
             new_tweets.reverse()  # 按时间正序
 
     except Exception as e:
@@ -784,23 +800,39 @@ def run_daemon(conn: sqlite3.Connection, interval: int = 300, use_api: bool = Fa
                     fail_counts[username] += 1
                     logger.warning(f"[@{username}] 第 {fail_counts[username]} 次连续失败")
 
-                    # 连续失败 ≥ 3 且启用微信推送 → 告警
+                    # 连续失败 ≥ 3 且启用微信推送 → 告警（v2.0: 含实例详情）
                     if fail_counts[username] >= 3 and notifier:
-                        notifier.error_alert(username, error, fail_counts[username])
+                        instance_info = {
+                            "failed": instance_used or "unknown",
+                            "failover_count_hour": fail_counts.get(username, 0),
+                            "monitoring_ok": False,
+                        }
+                        notifier.error_alert(username, error, fail_counts[username],
+                                           instance_info=instance_info)
 
                     if fail_counts[username] >= max_failures:
                         logger.critical(f"[@{username}] 连续失败 {max_failures} 次，暂时跳过")
                 else:
                     fail_counts[username] = 0
 
-                    # 有新推文 + 微信推送 → 通知
+                    # 有新推文 + 微信推送 → 通知（v2.0: 完整信号数据）
                     if new_tweets and notifier:
-                        tweets_data = [{
-                            "content": t.content,
-                            "translated": getattr(t, "translated", ""),
-                            "sentiment": getattr(t, "sentiment", "💬 一般"),
-                            "link": t.link or "",
-                        } for t in new_tweets]
+                        tweets_data = []
+                        for t in new_tweets:
+                            if hasattr(t, 'push_data') and t.push_data:
+                                tweets_data.append(t.push_data)
+                            else:
+                                tweets_data.append({
+                                    "content": t.content,
+                                    "translated": getattr(t, "translated", ""),
+                                    "sentiment": getattr(t, "sentiment", "💬 一般"),
+                                    "priority": "low",
+                                    "interpretation": "",
+                                    "signal_tags": [],
+                                    "sector_tags": [],
+                                    "direction": "neutral",
+                                    "link": t.link or "",
+                                })
                         notifier.new_tweets_alert(username, tweets_data)
 
                 # 标记已通知
@@ -826,7 +858,20 @@ def run_daemon(conn: sqlite3.Connection, interval: int = 300, use_api: bool = Fa
         if now - last_heartbeat > 1800:
             last_heartbeat = now
             if notifier:
-                notifier.heartbeat()
+                try:
+                    db_ok = True
+                    total_tweets = 0
+                    try:
+                        total_tweets = conn.execute("SELECT count(*) FROM tweets").fetchone()[0]
+                    except Exception:
+                        db_ok = False
+                    notifier.heartbeat({
+                        "total_tweets": total_tweets,
+                        "active_accounts": len(accounts),
+                        "db_healthy": db_ok,
+                    })
+                except Exception:
+                    notifier.heartbeat()
             logger.info(f"💓 心跳正常 | {len(accounts)}账号 | 本轮新增{total_new}条")
 
         cycle_duration = time.time() - cycle_start
